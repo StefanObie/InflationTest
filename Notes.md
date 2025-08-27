@@ -16,3 +16,15 @@
 Total Cost = `R561`
 
 Ek het al by albei van die plekke gekoop en dis goeie plekke. Ek kan dit bestel en gaan haal as jy wil. Dan kan ek ook sommer begin uitfigure hoe dit alles werk. 
+
+# Wed 27 Aug 2025
+## ESP32 as USB-to-UART Bridge
+### Wiring (ESP to ESP-CAM)
+- RX -> UOR
+- TX -> UOT
+- 5v -> 5V
+- GND -> GND
+
+### Other important steps
+1. Disable the ESP32 by connecting EN to GND.
+2. Put ESP-CAM in boot mode by connecting IO0 to GND, and pressing RST.
