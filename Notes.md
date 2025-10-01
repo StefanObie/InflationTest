@@ -28,3 +28,21 @@ Ek het al by albei van die plekke gekoop en dis goeie plekke. Ek kan dit bestel 
 ### Other important steps
 1. Disable the ESP32 by connecting EN to GND.
 2. Put ESP-CAM in boot mode by connecting IO0 to GND, and pressing RST.
+
+## Sensor Wiring
+
+To wire your ESP32 for the provided code, follow these steps:
+
+1. Water Pressure Sensor
+Signal Pin: Connect the signal output of your water pressure sensor to GPIO 27 on the ESP32.
+Power: Connect the power pin of the sensor to the 3.3V pin of the ESP32.
+Ground: Connect the ground pin of the sensor to the GND pin of the ESP32.
+2. DS18B20 Temperature Sensor
+Data Pin: Connect the data pin of the DS18B20 to GPIO 26 on the ESP32.
+Pull-up Resistor: Add a 4.7kΩ resistor between the data pin and the 3.3V pin to ensure proper communication.
+Power: Connect the VCC pin of the DS18B20 to the 3.3V pin of the ESP32.
+Ground: Connect the GND pin of the DS18B20 to the GND pin of the ESP32.
+3. Additional Notes
+Ensure that the ESP32 is powered properly, either via USB or an external power source.
+Double-check the pin numbers in the code (PRESSURE_PIN = 27, ONE_WIRE_BUS = 26) and ensure they match your wiring.
+If you're using a breadboard, make sure all connections are secure to avoid intermittent issues.

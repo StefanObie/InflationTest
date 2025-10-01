@@ -9,8 +9,13 @@
 // ===========================
 // Enter your WiFi credentials
 // ===========================
-const char *ssid = "Ephone";
-const char *password = "244466666";
+const char *ssid = "Oberholzerd";
+const char *password = "NZCGWJLB";
+
+// Static IP configuration
+IPAddress local_IP(192, 168, 0, 184);
+IPAddress gateway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 255, 0);
 
 void startCameraServer();
 void setupLedFlash();
@@ -106,6 +111,11 @@ void setup() {
   setupLedFlash();
 #endif
 
+  // Configure static IP
+  if (!WiFi.config(local_IP, gateway, subnet)) {
+    Serial.println("STA Failed to configure");
+  }
+
   WiFi.begin(ssid, password);
   WiFi.setSleep(false);
 
@@ -116,6 +126,16 @@ void setup() {
   }
   Serial.println("");
   Serial.println("WiFi connected");
+  
+  // Print network configuration for debugging
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Gateway: ");
+  Serial.println(WiFi.gatewayIP());
+  Serial.print("Subnet: ");
+  Serial.println(WiFi.subnetMask());
+  Serial.print("DNS: ");
+  Serial.println(WiFi.dnsIP());
 
   startCameraServer();
 
