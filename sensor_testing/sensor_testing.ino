@@ -26,6 +26,12 @@ DallasTemperature sensors(&oneWire);
 #define DIO 19
 TM1637Display display(CLK, DIO);
 
+// ---------------------------
+// Relay Control Setup
+// ---------------------------
+#define PUMP_RELAY_PIN 33   // GPIO connected to pump relay
+#define HEATER_RELAY_PIN 25 // GPIO connected to heater relay
+
 // Display timing variables
 unsigned long lastDisplayUpdate = 0;
 bool showingPressure = true;
@@ -58,6 +64,20 @@ void setup() {
   // Start DS18B20
   // --------------------------
   sensors.begin();
+
+  // --------------------------
+  // Initialize Relays
+  // --------------------------
+  pinMode(PUMP_RELAY_PIN, OUTPUT);
+  digitalWrite(PUMP_RELAY_PIN, LOW);  // Initialize pump relay off
+  pinMode(HEATER_RELAY_PIN, OUTPUT);
+  digitalWrite(HEATER_RELAY_PIN, LOW);  // Initialize heater relay off
+
+  // --------------------------
+  // Initialize GPIO Pin 14 as output HIGH for 3.3V
+  // --------------------------
+  pinMode(14, OUTPUT);
+  digitalWrite(14, HIGH);
 
   // --------------------------
   // Header for Serial Plotter
@@ -103,6 +123,24 @@ void loop() {
     displayPressure(P);
   } else {
     displayTemperature(tempC);
+  }
+
+  // --------------------------
+  // Relay test: toggle relays on/off every second
+  // --------------------------
+  {
+    static unsigned long lastToggle = 0;
+    static bool relaysOn = false;
+    const unsigned long TOGGLE_INTERVAL = 5000; // ms
+
+    if (currentTime - lastToggle >= TOGGLE_INTERVAL) {
+      lastToggle = currentTime;
+      relaysOn = !relaysOn;
+      digitalWrite(PUMP_RELAY_PIN, relaysOn ? HIGH : LOW);
+      digitalWrite(HEATER_RELAY_PIN, relaysOn ? HIGH : LOW);
+      Serial.print("Relay test - state: ");
+      Serial.println(relaysOn ? "ON" : "OFF");
+    }
   }
 
   delay(200); // Update every 200ms
