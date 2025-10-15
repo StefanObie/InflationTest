@@ -1,5 +1,7 @@
 #include "esp_camera.h"
 #include <WiFi.h>
+#include <SD_MMC.h>
+#include <time.h>
 
 // ===========================
 // Select camera model in board_config.h
@@ -112,7 +114,8 @@ void setup() {
 #endif
 
   // Configure static IP
-  if (!WiFi.config(local_IP, gateway, subnet)) {
+  IPAddress dns(8, 8, 8, 8);
+  if (!WiFi.config(local_IP, gateway, subnet, dns)) {
     Serial.println("STA Failed to configure");
   }
 
@@ -127,6 +130,10 @@ void setup() {
   Serial.println("");
   Serial.println("WiFi connected");
   
+  // Synchronize time with NTP
+  configTime(0, 0, "pool.ntp.org");
+  delay(5000); // Wait for time sync
+
   // Print network configuration for debugging
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
@@ -137,6 +144,15 @@ void setup() {
   Serial.print("DNS: ");
   Serial.println(WiFi.dnsIP());
 
+  // Initialize SD card
+  if (!SD_MMC.begin()) {
+    Serial.println("SD Card Mount Failed");
+    // return;
+  }
+  else {
+    Serial.println("SD Card initialized");
+  }
+
   startCameraServer();
 
   Serial.print("Camera Ready! Use 'http://");
@@ -145,6 +161,38 @@ void setup() {
 }
 
 void loop() {
-  // Do nothing. Everything is done in another task by the web server
-  delay(10000);
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    delay(1000);
+    return;
+  }
+
+  char dateStr[11];
+  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
+  String folder = "/" + String(dateStr) + "/";
+  SD_MMC.mkdir(folder);
+
+  char timeStr[16];
+  strftime(timeStr, sizeof(timeStr), "%b%d_%Hh%Mm%Ss", &timeinfo);
+  String filename = folder + "LEFT_" + String(timeStr) + ".jpg";
+
+  camera_fb_t *fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Camera capture failed");
+    delay(1000);
+    return;
+  }
+
+  File file = SD_MMC.open(filename.c_str(), FILE_WRITE);
+  if (!file) {
+    Serial.println("Failed to open file for writing");
+  } else {
+    file.write(fb->buf, fb->len);
+    file.close();
+    Serial.println("Image saved: " + filename);
+  }
+
+  esp_camera_fb_return(fb);
+  delay(1000);
 }
