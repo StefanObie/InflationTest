@@ -12,6 +12,9 @@ float V;      // Measured voltage
 float P;      // Calculated pressure in KPa
 int adcOffset = 0;  // ADC value corresponding to zero pressure
 
+// Add: track whether a DS18B20 was found
+bool tempSensorDetected = false;
+
 // ---------------------------
 // DS18B20 Temperature Sensor Setup
 // ---------------------------
@@ -65,6 +68,36 @@ void setup() {
   // --------------------------
   sensors.begin();
 
+  // Add: report detected DS18B20 devices and addresses
+  {
+    int deviceCount = sensors.getDeviceCount();
+    Serial.print("DS18B20 device count: ");
+    Serial.println(deviceCount);
+    if (deviceCount <= 0) {
+      Serial.println("Warning: No DS18B20 devices detected. Check wiring and pull-up resistor (4.7k).");
+      tempSensorDetected = false;
+    } else {
+      tempSensorDetected = true;
+      for (int i = 0; i < deviceCount; i++) {
+        DeviceAddress addr;
+        if (sensors.getAddress(addr, i)) {
+          Serial.print("Device ");
+          Serial.print(i);
+          Serial.print(" address: ");
+          for (uint8_t b = 0; b < 8; b++) {
+            if (addr[b] < 16) Serial.print("0");
+            Serial.print(addr[b], HEX);
+          }
+          Serial.println();
+        } else {
+          Serial.print("Device ");
+          Serial.print(i);
+          Serial.println(" address not available.");
+        }
+      }
+    }
+  }
+
   // --------------------------
   // Initialize Relays
   // --------------------------
@@ -99,6 +132,22 @@ void loop() {
   sensors.requestTemperatures();
   float tempC = sensors.getTempCByIndex(0);
 
+  // Handle disconnected sensor case (DallasTemperature defines DEVICE_DISCONNECTED_C, commonly -127)
+  bool tempValid = true;
+  if (tempC == DEVICE_DISCONNECTED_C) { // No Temp
+    tempValid = false;
+    Serial.println("Error: Could not read temperature (DEVICE_DISCONNECTED_C). Check wiring, pull-up resistor, and sensor power.");
+    
+  } else { // Valid Temperature
+    if (tempC < 37.5) {
+      digitalWrite(PUMP_RELAY_PIN, HIGH);
+      digitalWrite(HEATER_RELAY_PIN, HIGH);
+    } else {
+      digitalWrite(PUMP_RELAY_PIN, HIGH);
+      digitalWrite(HEATER_RELAY_PIN, HIGH);
+    }
+  }
+
   // --------------------------
   // Print all data for Serial Plotter
   // --------------------------
@@ -107,8 +156,12 @@ void loop() {
   Serial.print(P, 1);
   Serial.print(",");
   Serial.print(V, 3);
-  Serial.print(",");
-  Serial.println(tempC, 2);
+  if (tempValid) {
+    Serial.print(",");
+    Serial.println(tempC, 2);
+  } else {
+    Serial.println(",ERROR");
+  }
 
   // --------------------------
   // Update TM1637 Display (cycle every 3 seconds)
@@ -122,26 +175,30 @@ void loop() {
   if (showingPressure) {
     displayPressure(P);
   } else {
-    displayTemperature(tempC);
+    if (tempValid) {
+      displayTemperature(tempC);
+    } else {
+      displayTemperatureError(); // show error on display when temp invalid
+    }
   }
 
   // --------------------------
   // Relay test: toggle relays on/off every second
   // --------------------------
-  {
-    static unsigned long lastToggle = 0;
-    static bool relaysOn = false;
-    const unsigned long TOGGLE_INTERVAL = 5000; // ms
+  // {
+  //   static unsigned long lastToggle = 0;
+  //   static bool relaysOn = false;
+  //   const unsigned long TOGGLE_INTERVAL = 5000; // ms
 
-    if (currentTime - lastToggle >= TOGGLE_INTERVAL) {
-      lastToggle = currentTime;
-      relaysOn = !relaysOn;
-      digitalWrite(PUMP_RELAY_PIN, relaysOn ? HIGH : LOW);
-      digitalWrite(HEATER_RELAY_PIN, relaysOn ? HIGH : LOW);
-      Serial.print("Relay test - state: ");
-      Serial.println(relaysOn ? "ON" : "OFF");
-    }
-  }
+  //   if (currentTime - lastToggle >= TOGGLE_INTERVAL) {
+  //     lastToggle = currentTime;
+  //     relaysOn = !relaysOn;
+  //     digitalWrite(PUMP_RELAY_PIN, relaysOn ? HIGH : LOW);
+  //     digitalWrite(HEATER_RELAY_PIN, relaysOn ? HIGH : LOW);
+  //     Serial.print("Relay test - state: ");
+  //     Serial.println(relaysOn ? "ON" : "OFF");
+  //   }
+  // }
 
   delay(200); // Update every 200ms
 }
@@ -203,5 +260,16 @@ void displayTemperature(float temperature) {
     data[3] = display.encodeDigit(tempInt % 10);
   }
   
+  display.setSegments(data);
+}
+
+// Add: display an obvious error state for temperature (shows "C---")
+void displayTemperatureError() {
+  uint8_t data[4];
+  data[0] = 0x39; // "C"
+  const uint8_t SEG_MINUS = 0x40; // common segment for minus sign (may vary by TM1637 mapping)
+  data[1] = SEG_MINUS;
+  data[2] = SEG_MINUS;
+  data[3] = SEG_MINUS;
   display.setSegments(data);
 }

@@ -11,12 +11,12 @@
 // ===========================
 // Enter your WiFi credentials
 // ===========================
-const char *ssid = "Oberholzerd";
-const char *password = "NZCGWJLB";
+const char *ssid = "Ephone";
+const char *password = "244466666";
 
 // Static IP configuration
-IPAddress local_IP(192, 168, 0, 184);
-IPAddress gateway(192, 168, 0, 1);
+IPAddress local_IP(192, 168, 182, 184);
+IPAddress gateway(192, 168, 182, 45);
 IPAddress subnet(255, 255, 255, 0);
 
 void startCameraServer();
